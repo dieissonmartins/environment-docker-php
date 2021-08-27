@@ -2,4 +2,6 @@ FROM wyveo/nginx-php-fpm:latest
 
 WORKDIR /usr/share/nginx/
 
-RUN ln -s ./public ./html
+RUN rm -rf /usr/share/nginx/html
+
+RUN ln -s public html
