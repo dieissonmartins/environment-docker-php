@@ -1,7 +1,39 @@
-FROM wyveo/nginx-php-fpm:latest
+FROM php:8.1-fpm
 
-WORKDIR /usr/share/nginx/
+# Arguments defined in docker-compose.yml
+ARG user
+ARG uid
 
-RUN rm -rf /usr/share/nginx/html
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip
 
-RUN ln -s public html
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Config xdebug
+COPY xdebug.ini "${PHP_INI_DIR}/conf.d"
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
+# Get latest Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Create system user to run Composer and Artisan Commands
+RUN useradd -G www-data,root -u $uid -d /home/$user $user
+RUN mkdir -p /home/$user/.composer && \
+    chown -R $user:$user /home/$user
+
+# Set working directory
+WORKDIR /var/www
+
+USER $user
